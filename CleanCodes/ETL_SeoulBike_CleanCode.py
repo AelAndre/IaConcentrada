@@ -20,6 +20,10 @@
 import pandas as pd
 import numpy as np
 
+# ///// Paths /////
+PROJECT_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_DIR / 'Data'
+
 # ///// Load Data  /////
 df = pd.read_csv('SeoulBikeData.csv', encoding='latin1')
 
@@ -108,10 +112,10 @@ df['Weekend'] = np.where(df['Date'].dt.dayofweek >= 5, 1, 0)
 
 
 # ///// Divide by classes /////
-
 df['instance_id'] = df.index
 
-TEST_HOURS_PER_SEASON = 216
+TEST_HOURS_PER_SEASON = 120
+VAL_HOURS_PER_SEASON = 96
 
 season_change = df['Seasons'] != df['Seasons'].shift()
 
@@ -119,35 +123,46 @@ block_starts = df.index[season_change].tolist()
 
 block_ends = block_starts[1:] + [len(df)]
 
-train_parts, test_parts, map_parts = [], [], []
+train_parts, val_parts, test_parts, map_parts = [], [], [], []
 
 for start, end in zip(block_starts, block_ends):
     block = df.iloc[start:end]
-    block_train = block.iloc[:-TEST_HOURS_PER_SEASON]
-    block_test  = block.iloc[-TEST_HOURS_PER_SEASON:]
+    holdout = TEST_HOURS_PER_SEASON + VAL_HOURS_PER_SEASON
+
+    block_train = block.iloc[:-holdout]
+    block_val = block.iloc[-holdout:-TEST_HOURS_PER_SEASON]
+    block_test = block.iloc[-TEST_HOURS_PER_SEASON:]
 
     train_parts.append(block_train)
+    val_parts.append(block_val)
     test_parts.append(block_test)
 
-    map_parts.append(block_train.assign(split='train', local_id=range(1, len(block_train) + 1)))
-    map_parts.append(block_test.assign(split='test',  local_id=range(1, len(block_test) + 1)))
+    map_parts.append(block_train.assign(Subset='train', local_id=range(1, len(block_train) + 1)))
+    map_parts.append(block_val.assign(Subset='val', local_id=range(1, len(block_val) + 1)))
+    map_parts.append(block_test.assign(Subset='test', local_id=range(1, len(block_test) + 1)))
 
 df_train = pd.concat(train_parts)
-df_test  = pd.concat(test_parts)
+df_val = pd.concat(val_parts)
+df_test = pd.concat(test_parts)
 
-map = pd.concat(map_parts).sort_values('instance_id')
-map = map[['local_id', 'Date', 'Seasons', 'split', 'Functioning Day']].reset_index(drop=True)
+map_df = pd.concat(map_parts).sort_values('instance_id')
+map_df = map_df[['local_id', 'Date', 'Seasons', 'Subset', 'Functioning Day']].reset_index(drop=True)
 
 drop_cols = ['Rented Bike Count', 'Date', 'Functioning Day', 'instance_id']
 features = [col for col in df.columns if col not in drop_cols]
 
 X_train, Y_train = df_train[features], df_train['Rented Bike Count']
-X_test,  Y_test  = df_test[features],  df_test['Rented Bike Count']
+X_val, Y_val = df_val[features], df_val['Rented Bike Count']
+X_test, Y_test = df_test[features], df_test['Rented Bike Count']
 
 
 # ///// Export /////
-X_train.to_csv('X_train_seoul.csv')
-X_test.to_csv('X_test_seoul.csv')
-Y_train.to_csv('y_train_seoul.csv')
-Y_test.to_csv('y_test_seoul.csv')
-map.to_csv('Data_map_seoul.csv')
+X_train.to_csv('X_train_seoul.csv', index=False)
+Y_train.to_csv('Y_train_seoul.csv', index=False)
+X_val.to_csv('X_val_seoul.csv', index=False)
+Y_val.to_csv('Y_val_seoul.csv', index=False)
+X_test.to_csv('X_test_seoul.csv', index=False)
+Y_test.to_csv('Y_test_seoul.csv', index=False)
+map_df.to_csv('map_seoulData.csv', index=False)
+
+print("Exported: X_/Y_ train, val, test and map_seoulData.csv")
