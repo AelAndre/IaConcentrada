@@ -132,8 +132,25 @@ plt.close()
 
 
 # ///// Export /////
-with open(TABLE_DIR / "table_rf_importance.tex", "w") as f:
+importance.to_csv(RESULTS_DIR / "importance_rf.csv", index=False)
+
+with open(TABLE_DIR / "table_rf_importance.tex", "w", encoding="utf-8") as f:
     f.write(importance.to_latex(escape=True, index=False, float_format="%.4f"))
+
+tree_imp_path = RESULTS_DIR / "importance_tree.csv"
+if tree_imp_path.exists():
+    tree_imp = pd.read_csv(tree_imp_path).rename(columns={"importance": "Decision Tree"})
+    compare = (importance.rename(columns={"importance": "Random Forest"})
+               .merge(tree_imp, on="feature")
+               .rename(columns={"feature": "Feature"})
+               [["Feature", "Decision Tree", "Random Forest"]]
+               .sort_values("Random Forest", ascending=False))
+    print("\nFEATURE IMPORTANCE - TREE vs FOREST")
+    print(compare.to_string(index=False))
+    with open(TABLE_DIR / "table_importance_comparison.tex", "w", encoding="utf-8") as f:
+        f.write(compare.to_latex(escape=True, index=False, float_format="%.4f"))
+else:
+    print("\nRun DecisionTree_CleanCode.py first to also get the comparison table.")
 
 pd.DataFrame([
     {"Model": "Random Forest", "Subset": "val", **m_val},

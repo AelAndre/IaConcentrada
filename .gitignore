@@ -1,0 +1,21 @@
+# Virtual environment - never commit this.
+# It contains absolute paths from your machine and will not work on another one.
+venv/
+.venv/
+env/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Generated output.
+# Uncomment if you prefer a repository with code only. Left tracked so a
+# reviewer can see the results without running anything.
+# Figures/
+# Tables/
+# Results/

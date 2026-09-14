@@ -45,6 +45,8 @@ for _d in (FIGURE_DIR, TABLE_DIR, RESULTS_DIR):
     _d.mkdir(exist_ok=True)
 
 # ///// Load Data /////
+feature_names = list(pd.read_csv(DATA_DIR / 'X_train_seoul.csv').columns)
+
 X_train = pd.read_csv(DATA_DIR / 'X_train_seoul.csv').values.tolist()
 Y_train = pd.read_csv(DATA_DIR / 'Y_train_seoul.csv').values.flatten().tolist()
 
@@ -205,10 +207,21 @@ print(f"learning rate: {ALFA} | epochs run: {epochs}")
 print(f"\nfinal MSE train: {__errors__[-1]:,.2f}")
 print(f"final MSE val:   {__errors_val__[-1]:,.2f}")
 
-print("\nFinal weights (params[0] is the bias):")
-for i, p in enumerate(params):
-    label = "bias" if i == 0 else f"w{i}"
-    print(f"  {label:>5}: {p: .4f}")
+weights_table = pd.DataFrame({
+    "Parameter": ["Bias"] + feature_names,
+    "Weight": params,
+}).set_index("Parameter").round(4)
+
+print("\nFINAL WEIGHTS")
+print(weights_table.to_string())
+
+mean_train = sum(Y_train)/len(Y_train)
+baseline_test = [mean_train]*len(Y_test)
+m_baseline = all_metrics(Y_test, baseline_test)
+
+print(f"\nBASELINE (always predict the training mean of {mean_train:.2f})")
+for k, v in m_baseline.items():
+    print(f"  {k}: {v:.4f}")
 
 print("\nVALIDATION")
 for k, v in m_val.items():
@@ -243,9 +256,20 @@ plt.close()
 
 
 # ///// Export metrics for the comparison script /////
+metrics_table = pd.DataFrame([
+    {"Subset": "Validation", **m_val},
+    {"Subset": "Test", **m_test},
+]).set_index("Subset").round(4)
+
+with open(TABLE_DIR / "table_byhand_metrics.tex", "w", encoding="utf-8") as f:
+    f.write(metrics_table.to_latex(escape=True, float_format="%.4f"))
+
+with open(TABLE_DIR / "table_byhand_weights.tex", "w", encoding="utf-8") as f:
+    f.write(weights_table.to_latex(escape=True, float_format="%.4f"))
+
 pd.DataFrame([
     {"Model": "Linear Regression (by hand)", "Subset": "val", **m_val},
     {"Model": "Linear Regression (by hand)", "Subset": "test", **m_test},
 ]).to_csv(RESULTS_DIR / "metrics_byhand.csv", index=False)
 
-print("\nSaved: fig_byhand_learning_curve.png, fig_byhand_real_vs_pred.png, metrics_byhand.csv")
+print("\nSaved: figures, table_byhand_metrics.tex, table_byhand_weights.tex, metrics_byhand.csv")

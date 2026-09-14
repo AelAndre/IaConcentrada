@@ -154,8 +154,10 @@ plt.close()
 
 
 # ///// Export /////
-with open(RESULTS_DIR / "tree_rules.txt", "w") as f:
+with open(RESULTS_DIR / "tree_rules.txt", "w", encoding="utf-8") as f:
     f.write(export_text(tree, feature_names=feature_names, max_depth=3))
+
+importance.to_csv(RESULTS_DIR / "importance_tree.csv", index=False)
 
 pd.DataFrame([
     {"Model": "Decision Tree", "Subset": "val", **m_val},
